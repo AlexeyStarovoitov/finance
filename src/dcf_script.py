@@ -10,23 +10,39 @@ class DCF_calc:
         self.country_risk = country_risk
         self.horizont = horizont
 
+        aggregate_fields = ['revenue', 'gross_profit', 'sel_gen_adm_expenses', \
+                                'total_expenses', 'operating_income', 'interest_income']
 
         asset_db = pd.read_csv(csv_file)
-        self.ly_mult = 1
-        self.last_year =  asset_db['year'].max()
-
-        asset_db_max_year = asset_db[asset_db['year'] == self.last_year]
-        if (len(asset_db_max_year[asset_db_max_year['period']=='Y'])==0) & (len(asset_db_max_year[asset_db_max_year['period']=='6M'])!=0):
-            self.ly_mult = 2
-        elif (len(asset_db_max_year[asset_db_max_year['period']=='Y'])==0) & (len(asset_db_max_year[asset_db_max_year['period']=='Q'])!=0):
-            self.ly_mult = 4
-
-        self.asset_db = asset_db[asset_db['period']=='Y']
-        if self.ly_mult == 2:
-            self.asset_db = pd.concat([self.asset_db, asset_db_max_year[['period']=='6M']], axis = 0, sort=False)
-        elif self.ly_mult == 4:
-            self.asset_db = pd.concat([self.asset_db, asset_db_max_year[['period'] == 'Q']], axis=0, sort=False)
-
+        self.asset_db = asset_db_max_year[asset_db_max_year['period']=='Y']
+        
+        init_last_year = self.asset_db['year'].max()
+        res_last_year = asset_db['year'].max()
+        
+        if init_last_year != res_last_year:
+            
+            last_year_period = ['6M']
+            
+            year_cross_tab = pd.crosstab(index = asset_db['period'], values = asset_db['year'])
+            if year_cross_tab['6M', init_last_year] == 0:
+                last_year_period.append('Q')
+            
+            asset_db_last_year = asset_db[asset_db['year'] == init_last_year]
+            asset_db_last_year_1 = asset_db[(asset_db['period'] in last_year_period) & \
+                                   asset_db['year'] == (init_last_year - 1)]
+            
+            for entry in asset_db_last_year_1.index:
+                for column in asset_db_last_year_1.columns:
+                    if column.find('revenue') != -1 or column.find('expenses') == -1 or \
+                       column.find('income') != -1 or column.find('capex') != -1 or column.find('profit') != -1:
+                       asset_db_last_year[:1][column] +=  asset_db_last_year_1.loc[entry, column]
+            
+            pd.concat(self.asset_db, asset_db_last_year, axes = 0, sort = False)
+                    
+            
+            
+        
+        
     def calculate_fair_share_price(self):
         # Enterprice value calculation
         lst_row = self.asset_db[self.asset_db['year'] == self.last_year].iloc[0]
