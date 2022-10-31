@@ -46,7 +46,7 @@ if __name__ == '__main__':
         mod_columns = list(filter(filter_db, two_last_years_db.columns))
         last_year_result = two_last_years_db.loc[aggr_periods[0][0], aggr_periods[0][1]]
         
-        for i in range(1:len(aggr_periods)):
+        for i in range(1,len(aggr_periods)):
             for column in mod_columns:
                 last_year_result[mod_columns] +=  two_last_years_db.loc[aggr_periods[i][0], aggr_periods[i][1]][mod_columns]
         
