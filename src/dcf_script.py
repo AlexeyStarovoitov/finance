@@ -10,38 +10,69 @@ class DCF_calc:
         self.country_risk = country_risk
         self.horizont = horizont
 
-        aggregate_fields = ['revenue', 'gross_profit', 'sel_gen_adm_expenses', \
-                                'total_expenses', 'operating_income', 'interest_income']
-
         asset_db = pd.read_csv(csv_file)
-        self.asset_db = asset_db_max_year[asset_db_max_year['period']=='Y']
+        filt_asset_db = asset_db[asset_db['period']=='Y']
         
-        init_last_year = self.asset_db['year'].max()
-        res_last_year = asset_db['year'].max()
+        print(filt_asset_db)
+        last_year = asset_db['year'].max()
+        filt_last_year = filt_asset_db['year'].max()
+        print(f"last_year: {last_year}\nfilt_last_year: {filt_last_year}")
         
-        if init_last_year != res_last_year:
+        if last_year != filt_last_year:
             
-            last_year_period = ['6M']
+            two_last_years_db = asset_db[(asset_db['year']==last_year) | (asset_db['year']==(last_year-1))]
+            two_last_years_crosstab = pd.crosstab(index = asset_db['year'], columns = asset_db['period'])
+            print(two_last_years_crosstab)
+     
+            aggr_periods = []
             
-            year_cross_tab = pd.crosstab(index = asset_db['period'], values = asset_db['year'])
-            if year_cross_tab['6M', init_last_year] == 0:
-                last_year_period.append('Q')
+            if two_last_years_crosstab.loc[last_year, 'Q'] == 2:
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
+            elif two_last_years_crosstab.loc[last_year, 'Q'] == 1 and two_last_years_crosstab.loc[last_year, '6M'] == 0:
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])
+            elif two_last_years_crosstab.loc[last_year, '6M'] != 0:
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])	
             
-            asset_db_last_year = asset_db[asset_db['year'] == init_last_year]
-            asset_db_last_year_1 = asset_db[(asset_db['period'] in last_year_period) & \
-                                   asset_db['year'] == (init_last_year - 1)]
             
-            for entry in asset_db_last_year_1.index:
-                for column in asset_db_last_year_1.columns:
-                    if column.find('revenue') != -1 or column.find('expenses') == -1 or \
-                       column.find('income') != -1 or column.find('capex') != -1 or column.find('profit') != -1:
-                       asset_db_last_year[:1][column] +=  asset_db_last_year_1.loc[entry, column]
+            mod_columns = list(filter(filter_db, two_last_years_db.columns))
+            last_year_result = two_last_years_db.loc[aggr_periods[0], :]
             
-            pd.concat(self.asset_db, asset_db_last_year, axes = 0, sort = False)
+            # print(f'\nmod_columns:\n{mod_columns}')
+            # print(f'\nlast_year_result:\n{last_year_result}')
+            # print(last_year_result.shape)
+            # print(last_year_result['period'])
+            # print(two_last_years_db)  
+            
+            # print(aggr_periods)
+            
+            for i in range(1,len(aggr_periods)):
+                for column in mod_columns:
+                    last_year_result[column] +=  two_last_years_db.loc[aggr_periods[i],column]
+            
+            last_year_result['period']='Y'
+            last_year_result['month']=12
+            
+            #must be debugged
+            last_year_result = pd.DataFrame(data=np.array(last_year_result.values), index=[max(filt_asset_db.index)] , columns=last_year_result.index)
+            pd.concat(filt_asset_db, last_year_result, axis=0)
+        
+        self.asset_db = filt_asset_db
                     
             
             
+    @staticmethod
+    def filter_db(column):
+        patterns = ['capex', 'profit', 'revenue', 'earning', 'amort', 'expense']
+        for pattern in patterns:
+            if re.search(pattern, column):
+                return True
         
+        return False
         
     def calculate_fair_share_price(self):
         # Enterprice value calculation
