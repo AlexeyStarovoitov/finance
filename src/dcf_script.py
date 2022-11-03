@@ -13,10 +13,9 @@ class DCF_calc:
         asset_db = pd.read_csv(csv_file)
         filt_asset_db = asset_db[asset_db['period']=='Y']
         
-        print(filt_asset_db)
         last_year = asset_db['year'].max()
         filt_last_year = filt_asset_db['year'].max()
-        print(f"last_year: {last_year}\nfilt_last_year: {filt_last_year}")
+        
         
         if last_year != filt_last_year:
             
@@ -26,30 +25,24 @@ class DCF_calc:
      
             aggr_periods = []
             
-            if two_last_years_crosstab.loc[last_year, 'Q'] == 2:
-                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
-                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])
+            if two_last_years_crosstab.loc[last_year, '9M'] == 1:
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='9M')].index.values.astype(int)[-1])
                 aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
-            elif two_last_years_crosstab.loc[last_year, 'Q'] == 1 and two_last_years_crosstab.loc[last_year, '6M'] == 0:
-                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
-                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
-                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])
-            elif two_last_years_crosstab.loc[last_year, '6M'] != 0:
+            elif two_last_years_crosstab.loc[last_year, 'Q'] == 2 and two_last_years_crosstab.loc[last_year, '6M'] == 1:
                 aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])
                 aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])	
+            elif two_last_years_crosstab.loc[last_year, 'Q'] == 1:
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
+                aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])	
             
+            
+            print(f'aggr_periods:\n{aggr_periods}')
             
             mod_columns = list(filter(filter_db, two_last_years_db.columns))
             last_year_result = two_last_years_db.loc[aggr_periods[0], :]
             
-            # print(f'\nmod_columns:\n{mod_columns}')
-            # print(f'\nlast_year_result:\n{last_year_result}')
-            # print(last_year_result.shape)
-            # print(last_year_result['period'])
-            # print(two_last_years_db)  
-            
-            # print(aggr_periods)
-            
+           
             for i in range(1,len(aggr_periods)):
                 for column in mod_columns:
                     last_year_result[column] +=  two_last_years_db.loc[aggr_periods[i],column]
@@ -57,9 +50,11 @@ class DCF_calc:
             last_year_result['period']='Y'
             last_year_result['month']=12
             
-            #must be debugged
-            last_year_result = pd.DataFrame(data=np.array(last_year_result.values), index=[max(filt_asset_db.index)] , columns=last_year_result.index)
-            pd.concat(filt_asset_db, last_year_result, axis=0)
+            
+            dict_data = dict(zip(last_year_result.index, last_year_result.values))
+            last_year_result = pd.DataFrame(data=dict_data, index=[max(filt_asset_db.index)+1] )
+            filt_asset_db = pd.concat([filt_asset_db, last_year_result])
+           
         
         self.asset_db = filt_asset_db
                     

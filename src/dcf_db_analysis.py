@@ -36,52 +36,49 @@ if __name__ == '__main__':
  
         aggr_periods = []
         
-        if two_last_years_crosstab.loc[last_year, 'Q'] == 2:
-            aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
-            aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])
+        if two_last_years_crosstab.loc[last_year, '9M'] == 1:
+            aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='9M')].index.values.astype(int)[-1])
             aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
-        elif two_last_years_crosstab.loc[last_year, 'Q'] == 1 and two_last_years_crosstab.loc[last_year, '6M'] == 0:
-            aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
-            aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
-            aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])
-        elif two_last_years_crosstab.loc[last_year, '6M'] != 0:
+        elif two_last_years_crosstab.loc[last_year, 'Q'] == 2 and two_last_years_crosstab.loc[last_year, '6M'] == 1:
             aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])
             aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])	
+        elif two_last_years_crosstab.loc[last_year, 'Q'] == 1:
+            aggr_periods.append(two_last_years_db[(two_last_years_db['year']==last_year) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
+            aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='Q')].index.values.astype(int)[-1])
+            aggr_periods.append(two_last_years_db[(two_last_years_db['year']==(last_year-1)) & (two_last_years_db['period']=='6M')].index.values.astype(int)[-1])	
         
+        
+        print(f'aggr_periods:\n{aggr_periods}')
         
         mod_columns = list(filter(filter_db, two_last_years_db.columns))
         last_year_result = two_last_years_db.loc[aggr_periods[0], :]
         
-        # print(f'\nmod_columns:\n{mod_columns}')
-        # print(f'\nlast_year_result:\n{last_year_result}')
-        # print(last_year_result.shape)
-        # print(last_year_result['period'])
-        # print(two_last_years_db)  
         
-        # print(aggr_periods)
         
         for i in range(1,len(aggr_periods)):
             for column in mod_columns:
                 last_year_result[column] +=  two_last_years_db.loc[aggr_periods[i],column]
         
         last_year_result['period']='Y'
+        last_year_result['month']=12
         print(max(filt_asset_db.index))
-        
-        #must be debugged
-        #print(list(last_year_result.index))
-        #print(np.array(last_year_result.values))
         
         dict_data = dict(zip(last_year_result.index, last_year_result.values))
         
-        print(dict_data)
+        #print(dict_data)
         
         last_year_result = pd.DataFrame(data=dict_data, index=[max(filt_asset_db.index)+1] )
         
-        print(f'\nlast_year_result:\n{last_year_result}')
-        print(type(last_year_result))
+        #print(f'\nlast_year_result:\n{last_year_result}')
+        #print(type(last_year_result))
         
-        print(f'\nfilt_asset_db:\n{filt_asset_db}')         
+              
+        # print(f'\last_year_result:\n{last_year_result}')   
+        filt_asset_db = pd.concat([filt_asset_db, last_year_result])
+        # print(f'\filt_asset_db:\n{filt_asset_db}')   
         
-        pd.concat([filt_asset_db, last_year_result])
+        print(f'\nfilt_asset_db:\n{filt_asset_db[filt_asset_db["year"] == last_year]}')   
         
-    # print(filt_asset_db)  
+        print(f'\nasset_db:\n{asset_db[(asset_db["year"] == last_year) | (asset_db["year"] == last_year-1)]}')   
+        
+   
