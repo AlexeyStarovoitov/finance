@@ -68,15 +68,20 @@ if __name__ == '__main__':
         print(max(filt_asset_db.index))
         
         #must be debugged
-        print(list(last_year_result.index))
-        print(np.array(last_year_result.values))
-        last_year_result = pd.DataFrame(data=list(last_year_result.values), index=[max(filt_asset_db.index)] , columns=list(last_year_result.index))
+        #print(list(last_year_result.index))
+        #print(np.array(last_year_result.values))
+        
+        dict_data = dict(zip(last_year_result.index, last_year_result.values))
+        
+        print(dict_data)
+        
+        last_year_result = pd.DataFrame(data=dict_data, index=[max(filt_asset_db.index)+1] )
         
         print(f'\nlast_year_result:\n{last_year_result}')
         print(type(last_year_result))
         
-        #print(f'\nfilt_asset_db:\n{filt_asset_db}')         
+        print(f'\nfilt_asset_db:\n{filt_asset_db}')         
         
-        pd.concat(filt_asset_db, last_year_result, axis=1)
+        pd.concat([filt_asset_db, last_year_result])
         
     # print(filt_asset_db)  
