@@ -64,17 +64,19 @@ class DCF_calc:
 
         for column in last_year_result.index:
             if re.search('num[1-9].??$', column) or re.search('price[1-9].??_day$', column):
-                stock_id = re.findall('[0-9]+', column)
-                if stock_id not in stock_data_dict.keys():
+                stock_id = int(re.findall('[0-9]+', column)[0])
+                if stock_id not in stock_data_dict:
                     stock_data_dict[stock_id] = {'ev_price':0}
 
-                if re.search('num[1-9].??$', column) and 'num' not in stock_data_dict[stock_id].keys():
+                if re.search('num[1-9].??$', column) and 'num' not in stock_data_dict[stock_id]:
                     stock_data_dict[stock_id]['num'] = last_year_result[column]
-                if re.search('price[1-9].??_day$', column) and 'price' not in stock_data_dict[stock_id].keys():
+                if re.search('price[1-9].??_day$', column) and 'price' not in stock_data_dict[stock_id]:
                     stock_data_dict[stock_id]['cur_price'] = last_year_result[column]
 
+        #min_stock_id = min(stock_data_dict, key=stock_data_dict.get)
+        min_stock_id = min(stock_data_dict.keys())
         for stock_id in stock_data_dict.keys():
-            stock_data_dict[stock_id]['stock_ratio'] = stock_data_dict[stock_id]['cur_price']/stock_data_dict['1']['cur_price']
+            stock_data_dict[stock_id]['stock_ratio'] = stock_data_dict[stock_id]['cur_price']/stock_data_dict[min_stock_id]['cur_price']
 
         return stock_data_dict
 
@@ -94,7 +96,7 @@ class DCF_calc:
         filt_last_year = filt_asset_db['year'].max()
         if last_year != filt_last_year:
             asset_db = DCF_calc.interpolate_last_year(asset_db, filt_asset_db)
-        self.asset_db = filt_asset_db
+        self.asset_db = asset_db
         self.stock_data_dict = DCF_calc.calculate_stock_data(self.asset_db)
 
     def calculate_wacc(self, last_year_result):
@@ -170,13 +172,13 @@ class DCF_calc:
     def calculate_fair_share_price(self):
 
        #Calculate capitalization
-        last_year_result = self.asset_db.iloc[-1, :]
+        last_year_result = self.asset_db.iloc[-1, :].copy()
         last_year_result['capital'] = 0
         for stock_id in self.stock_data_dict.keys():
             last_year_result['capital'] += self.stock_data_dict[stock_id]['cur_price']*self.stock_data_dict[stock_id]['num']
 
        #Calculate evaluation price
-        ev = last_year_result['capital'] + last_year_result['total_debt'] - last_year_result['cash_and_equiv']
+        self.ev = last_year_result['capital'] + last_year_result['total_debt'] - last_year_result['cash_and_equiv']
 
        # Calculate WACC
         self.wacc = self.calculate_wacc(last_year_result)
@@ -209,7 +211,7 @@ class DCF_calc:
 if __name__=='__main__':
 
     arg_parser = argparse.ArgumentParser()
-    arg_parser.add_argument('-csv_file', dest='csv_file',type=str)
+    arg_parser.add_argument('-csv_file', dest='csv_file', type=str)
     arg_parser.add_argument('-betta', dest='betta', type=float)
     arg_parser.add_argument('-rf', dest='rf', type=float)
     arg_parser.add_argument('-rm', dest='rm', type=float)
