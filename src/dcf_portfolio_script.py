@@ -25,7 +25,9 @@ if __name__=='__main__':
 	argparser.add_argument("-portfolio_db", dest=portfolio_db, type=str)
 	args=argparser.parse_args()
 	
-	stock_db = pd.read_csv(args.portfolio_db)
+	portfolio_db = pd.read_csv(args.portfolio_db)
+    column_dict = parse_column_names(portfolio_db.columns)
+    #insert current_prices, calculated_prices and margin into portfolio_db
 	
 	
 	
