@@ -35,8 +35,9 @@ Input:
 - Fair price/ Terminal Price calculation.
 
 Dataset Source:
-https://financemarker.ru/stocks/MOEX/CHMF
+https://financemarker.ru/stocks/
 https://www.gurufocus.com/global-market-valuation.php?country=RUS
+https://aswathdamodaran.blogspot.com/2022/07/country-risk-2022-mid-year-update.html
 https://www.moex.com/ru/forts/coefficients-values.aspx
 
 
