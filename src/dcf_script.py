@@ -4,6 +4,8 @@ import numpy_financial as npf
 import re
 import argparse
 
+#add dataframe columns header parser similar to dcf_portfolio_script.py
+
 class DCF_calc:
     @staticmethod
     def filter_db(column):
