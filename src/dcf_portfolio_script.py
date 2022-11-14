@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-import argparse
+from argparse import ArgumentParser
 import re
 import dcf_script as dcf
 
@@ -21,12 +21,10 @@ def parse_column_names(db_columns, pattern_dict):
 	
 
 if __name__=='__main__':
-	argparser = argparse.ArgumentParser()
-	argparser.add_argument("-portfolio_db", dest=portfolio_db, type=str)
-	args=argparser.parse_args()
-	
-	portfolio_db = pd.read_csv(args.portfolio_db)
-    
+    argparser = ArgumentParser()
+    argparser.add_argument("-portfolio_db", dest="portfolio_db", type=str)
+    args=argparser.parse_args()
+    portfolio_db = pd.read_csv(args.portfolio_db)
     new_columns = dict(current_prices="current_prices", calculated_prices="calculated_prices", margin="margin")
     for column_key in new_columns:
     	new_col = pd.Series(data=np.zeros(len(portfolio_db)), index=portfolio_db.index, dtype = np.float64)
@@ -34,7 +32,7 @@ if __name__=='__main__':
     	
     	pattern_dict = dict(id = ["id"], betta=["betta"], file=["file"], rm=["rm"], rf=["rf"], crp=["crp"], hrznt =["hrznt"], cur_price=["cur_price"], ev_prices=["ev_prices"], margin=["margin"])
     	column_dict = parse_column_names(portfolio_db.columns, pattern_dict)
-    	
+    	print(f'column_dict: {column_dict}')
     	for row_index in portfolio_db.index:
     		cur_row = portfolio_db.loc[row_index, :]
     		dcf_clc = dcf.DCF_calc(csv_file=column_dict[file], betta =column_dict[betta], rf = column_dict[rf], rm = column_dict[rm], country_risk = column_dict[crp], invst_hrznt=column_dict[hrznt])
@@ -42,10 +40,10 @@ if __name__=='__main__':
     	for key in result_stock_price.keys():
     		cur_row[key] = result_stock_price[key]
     	
-    	portfolio_db_ file_path = args.portfolio_db
-    	portfolio_db_ file_path_splt = portfolio_db_ file_path.split(".csv")
-    	new_portfolio_db_ file_path = portfolio_db_ file_path_splt[0]+ "dcf_analysis.csv"
-    	portfolio_db.to_csv(new_portfolio_db_ file_path)
+    	portfolio_db_file_path = args.portfolio_db
+    	portfolio_db_file_path_splt = portfolio_db_file_path.split(".csv")
+    	new_portfolio_db_file_path = portfolio_db_file_path_splt[0]+ "dcf_analysis.csv"
+    	portfolio_db.to_csv(new_portfolio_db_file_path)
     	
 	
 	
