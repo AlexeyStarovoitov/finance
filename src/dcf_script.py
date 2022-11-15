@@ -119,7 +119,7 @@ class DCF_calc:
         # FCF database creation
         fcf_indexes = ['earnings', 'depr_depl_amort', 'capex', 'ebitda', 'nwc', 'delta_nwc', 'fcf']
         fcf_columns = list(asset_db['year'].apply(str).values)
-        for year in range(asset_db['year'].max() + 1, asset_db['year'].max() + invst_hrznt + 1):
+        for year in range(int(asset_db['year'].max()) + 1, int(asset_db['year'].max()) + int(invst_hrznt) + 1):
             fcf_columns.append(str(year))
         fcf_df = pd.DataFrame(data=np.zeros((len(fcf_indexes), len(fcf_columns))), index=fcf_indexes,
                               columns=fcf_columns)
