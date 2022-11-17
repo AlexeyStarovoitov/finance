@@ -92,12 +92,15 @@ class DCF_calc:
         self.invst_hrznt = invst_hrznt
 
         asset_db = pd.read_csv(csv_file)
+        asset_db = asset_db[asset_db['type'] == 'МСФО']
         filt_asset_db = asset_db[asset_db['period']=='Y']
         
         last_year = asset_db['year'].max()
         filt_last_year = filt_asset_db['year'].max()
         if last_year != filt_last_year:
             asset_db = DCF_calc.interpolate_last_year(asset_db, filt_asset_db)
+        else:
+            asset_db = filt_asset_db
         self.asset_db = asset_db
         self.stock_data_dict = DCF_calc.calculate_stock_data(self.asset_db)
 
@@ -152,7 +155,7 @@ class DCF_calc:
             extrp_coef[i] = extrp_coef[i] / (int(init_min_max_year[1]) - int(init_min_max_year[0]))
 
         #FCF extrapolation
-        ext_period = [str(int(init_min_max_year[1]) + 1), str(int(init_min_max_year[1]) + invst_hrznt)]
+        ext_period = [str(int(init_min_max_year[1]) + 1), str(int(init_min_max_year[1]) + int(invst_hrznt))]
         for i in fcf_indexes:
             if i in extrp_compnts:
                 for j in range(int(ext_period[0]), int(ext_period[1]) + 1):
@@ -189,7 +192,7 @@ class DCF_calc:
         self.dcf_ev = DCF_calc.calculate_ev_dcf(self.asset_db, self.ev, self.wacc, self.invst_hrznt)
         self.dcf_cap =  self.dcf_ev  - last_year_result['total_debt'] + last_year_result['cash_and_equiv']
 
-        result_stock_data = {}
+        result_stock_data = dict()
 
         #print('Num  Current price   Evaluated price Margin,%')
         priv_num = 0
