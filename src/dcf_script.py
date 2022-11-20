@@ -21,25 +21,34 @@ class DCF_calc:
         last_year = asset_db['year'].max()
 
         two_last_years_db = asset_db[(asset_db['year'] == last_year) | (asset_db['year'] == (last_year - 1))]
-        two_last_years_crosstab = pd.crosstab(index=asset_db['year'], columns=asset_db['period'])
+        two_last_years_crosstab = pd.crosstab(index=two_last_years_db['year'], columns=two_last_years_db['period'])
 
+        periods = ['Q', '6M', '9M', 'Y']
+        av_periods = [per in two_last_years_db['period'].array for per in periods]
+        av_periods = dict(zip(periods,av_periods))
         aggr_periods = []
 
-        if two_last_years_crosstab.loc[last_year, '9M'] == 1:
+        if av_periods['9M']==True and two_last_years_crosstab.loc[last_year, '9M'] == 1:
             aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == last_year) & (
                     two_last_years_db['period'] == '9M')].index.values.astype(int)[-1])
             aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & (
                     two_last_years_db['period'] == 'Q')].index.values.astype(int)[-1])
-        elif two_last_years_crosstab.loc[last_year, 'Q'] == 2 and two_last_years_crosstab.loc[last_year, '6M'] == 1:
+        elif av_periods['Q']==True and av_periods['6M']==True and two_last_years_crosstab.loc[last_year, 'Q'] == 2 and two_last_years_crosstab.loc[last_year, '6M'] == 1:
             aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == last_year) & (
                     two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
             aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & (
                     two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
-        elif two_last_years_crosstab.loc[last_year, 'Q'] == 1:
+        elif av_periods['Q']==True and av_periods['6M']==True and two_last_years_crosstab.loc[last_year, 'Q'] == 1:
             aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == last_year) & (
                     two_last_years_db['period'] == 'Q')].index.values.astype(int)[-1])
             aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & (
                     two_last_years_db['period'] == 'Q')].index.values.astype(int)[-1])
+            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & (
+                    two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
+        elif av_periods['6M']==True and two_last_years_crosstab.loc[last_year, '6M'] == 1:
+            print(two_last_years_db['code'])
+            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == last_year) & (
+                    two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
             aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & (
                     two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
 
@@ -66,19 +75,19 @@ class DCF_calc:
 
         for column in last_year_result.index:
             if re.search('num[1-9].??$', column) or re.search('price[1-9].??_day$', column):
-                stock_id = int(re.findall('[0-9]+', column)[0])
-                if stock_id not in stock_data_dict:
-                    stock_data_dict[stock_id] = {'ev_price':0}
+                price_id = int(re.findall('[0-9]+', column)[0])
+                if price_id not in stock_data_dict:
+                    stock_data_dict[price_id] = {'ev_price':0}
 
-                if re.search('num[1-9].??$', column) and 'num' not in stock_data_dict[stock_id]:
-                    stock_data_dict[stock_id]['num'] = last_year_result[column]
-                if re.search('price[1-9].??_day$', column) and 'price' not in stock_data_dict[stock_id]:
-                    stock_data_dict[stock_id]['cur_price'] = last_year_result[column]
+                if re.search('num[1-9].??$', column) and 'num' not in stock_data_dict[price_id]:
+                    stock_data_dict[price_id]['num'] = last_year_result[column]
+                if re.search('price[1-9].??_day$', column) and 'price' not in stock_data_dict[price_id]:
+                    stock_data_dict[price_id]['cur_price'] = last_year_result[column]
 
         #min_stock_id = min(stock_data_dict, key=stock_data_dict.get)
-        min_stock_id = min(stock_data_dict.keys())
-        for stock_id in stock_data_dict.keys():
-            stock_data_dict[stock_id]['stock_ratio'] = stock_data_dict[stock_id]['cur_price']/stock_data_dict[min_stock_id]['cur_price']
+        min_price_id = min(stock_data_dict.keys())
+        for price_id in stock_data_dict.keys():
+            stock_data_dict[price_id]['stock_ratio'] = stock_data_dict[price_id]['cur_price']/stock_data_dict[min_price_id]['cur_price']
 
         return stock_data_dict
 
@@ -111,7 +120,10 @@ class DCF_calc:
         # print(f'we1: {we}\nwd1: {wd}\n')
 
         ke = self.rf + self.betta * (self.rm - self.rf) + self.country_risk
-        kd = last_year_result['interest_expense'] / last_year_result['total_debt'] * 100
+        if last_year_result['total_debt'] > 0:
+            kd = last_year_result['interest_expense'] / last_year_result['total_debt'] * 100
+        else:
+            kd = 0
         tax = (last_year_result['earnings_wo_tax'] - last_year_result['earnings']) / last_year_result['earnings_wo_tax']
 
         wacc = (ke * we * (1 - tax) + kd * wd) / 100
@@ -179,8 +191,8 @@ class DCF_calc:
        #Calculate capitalization
         last_year_result = self.asset_db.iloc[-1, :].copy()
         last_year_result['capital'] = 0
-        for stock_id in self.stock_data_dict.keys():
-            last_year_result['capital'] += self.stock_data_dict[stock_id]['cur_price']*self.stock_data_dict[stock_id]['num']
+        for price_id in self.stock_data_dict.keys():
+            last_year_result['capital'] += self.stock_data_dict[price_id]['cur_price']*self.stock_data_dict[price_id]['num']
 
        #Calculate evaluation price
         self.ev = last_year_result['capital'] + last_year_result['total_debt'] - last_year_result['cash_and_equiv']
@@ -196,16 +208,16 @@ class DCF_calc:
 
         #print('Num  Current price   Evaluated price Margin,%')
         priv_num = 0
-        for stock_id in self.stock_data_dict.keys():
-            priv_num += self.stock_data_dict[stock_id]['stock_ratio']*self.stock_data_dict[stock_id]['num']
+        for price_id in self.stock_data_dict.keys():
+            priv_num += self.stock_data_dict[price_id]['stock_ratio']*self.stock_data_dict[price_id]['num']
         base_stock_price = self.dcf_cap/priv_num
 
-        for stock_id in self.stock_data_dict.keys():
+        for price_id in self.stock_data_dict.keys():
             cur_stock_dict = {}
-            cur_stock_dict['cur_price'] = self.stock_data_dict[stock_id]['cur_price']
-            cur_stock_dict['ev_price'] = self.stock_data_dict[stock_id]['stock_ratio']*base_stock_price
+            cur_stock_dict['cur_price'] = self.stock_data_dict[price_id]['cur_price']
+            cur_stock_dict['ev_price'] = self.stock_data_dict[price_id]['stock_ratio']*base_stock_price
             cur_stock_dict['margin'] = (cur_stock_dict['ev_price'] - cur_stock_dict['cur_price'])/cur_stock_dict['cur_price']*100
-            result_stock_data[stock_id] = cur_stock_dict
+            result_stock_data[price_id] = cur_stock_dict
 
         self.result_stock_data = result_stock_data
 

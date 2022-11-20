@@ -32,27 +32,34 @@ if __name__=='__main__':
 	args=argparser.parse_args()
 	portfolio_db_file = '../stock_data/stock_data.csv'
 	portfolio_db = pd.read_csv(portfolio_db_file)
+
 	result_columns = dict(stock_id=str, price_id=int, current_price=np.float64, calculated_price=np.float64, margin=np.float64)
 	result_stock_pattern = dict(current_price=["current_price", "cur_price"],
 								calculated_price=["calculated_price", "ev_price"], margin=["margin"])
-	result_portfolio_db = pd.DataFrame()
-	pattern_dict = dict(id=["id"], betta=["betta"], file=["file"], rm=["rm"], rf=["rf"], crp=["country_risk"],
-						hrznt=["horizont"], cur_price=["current_prices"], ev_prices=["ev_prices"], margin=["margin"])
-	column_dict = parse_column_names(list(portfolio_db.columns), pattern_dict)
+	result_portfolio_db = pd.DataFrame(columns=list(result_columns.keys()))
+	'''
 	for column_name, column_type in result_columns.items():
 		new_col = pd.Series(data=np.zeros(len(1)), index=portfolio_db.index, dtype = column_type)
 		result_portfolio_db.insert(loc = len(result_portfolio_db.columns), column=column_name, value=new_col)
+	'''
+
+
+	pattern_dict = dict(id=["id"], betta=["betta"], file=["file"], rm=["rm"], rf=["rf"], crp=["country_risk"],
+						hrznt=["horizont"], cur_price=["current_prices"], ev_prices=["ev_prices"], margin=["margin"])
+	column_dict = parse_column_names(list(portfolio_db.columns), pattern_dict)
 	for row_index in portfolio_db.index:
-		cur_row = portfolio_db.loc[row_index, :]
+		cur_row = portfolio_db.loc[row_index, :].copy()
 		dcf_clc = dcf.DCF_calc(csv_file='../stock_data/'+cur_row[column_dict['file']], betta = cur_row[column_dict['betta']], rf = cur_row[column_dict['rf']], rm = cur_row[column_dict['rm']], country_risk = cur_row[column_dict['crp']], invst_hrznt=int(cur_row[column_dict['hrznt']]))
 		result_stock_price = dcf_clc.calculate_fair_share_price()
+		first_price = next(iter(result_stock_price))
+		res_col_dict = parse_column_names(result_stock_price[first_price], result_stock_pattern)
 		for price_id in result_stock_price:
 			cur_result_stock_price = result_stock_price[price_id]
-			res_col_dict = parse_column_names(list(cur_result_stock_price.keys()), result_stock_pattern)
-			result_row = {'id':cur_row[column_dict['id']], 'price_id':price_id}
+			result_row = {'stock_id':cur_row[column_dict['id']], 'price_id':price_id}
 			for key in res_col_dict.keys():
-				result_row[key] = result_stock_price[res_col_dict[key]]
-			result_portfolio_db.append(result_row, ignore_index=True)
+				result_row[key] = cur_result_stock_price[res_col_dict[key]]
+			result_row = pd.Series(data=result_row)
+			result_portfolio_db = pd.concat([result_portfolio_db, result_row.to_frame().transpose()], ignore_index = True)
 
 	portfolio_db_file_path = portfolio_db_file
 	portfolio_db_file_path_splt = portfolio_db_file_path.split(".csv")
