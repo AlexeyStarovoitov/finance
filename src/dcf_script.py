@@ -11,7 +11,7 @@ class DCF_calc:
     def filter_db(column):
         patterns = ['capex', 'profit', 'revenue', 'earning', 'amort', 'expense']
         for pattern in patterns:
-            if re.search(pattern, column):
+            if re.search(pattern, column, re.IGNORECASE):
                 return True
 
         return False
@@ -28,27 +28,26 @@ class DCF_calc:
         av_periods = dict(zip(periods,av_periods))
         aggr_periods = []
 
-        if av_periods['9M']==True and two_last_years_crosstab.loc[last_year, '9M'] == 1:
+        if av_periods['9M'] and av_periods['Q'] and two_last_years_crosstab.loc[last_year, '9M'] == 1:
+
+            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == last_year) & \
+                                (two_last_years_db['period'] == '9M')].index.values.astype(int)[-1])
+            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & \
+                                (two_last_years_db['period'] == 'Q')].index.values.astype(int)[-1])
+
+        elif av_periods['6M'] and two_last_years_crosstab.loc[last_year, '6M'] == 1:
+
             aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == last_year) & (
-                    two_last_years_db['period'] == '9M')].index.values.astype(int)[-1])
+                    two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
+            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & (
+                    two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
+
+        elif av_periods['Q'] and av_periods['6M'] and two_last_years_crosstab.loc[last_year, 'Q'] == 1:
+
+            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == last_year) & (
+                    two_last_years_db['period'] == 'Q')].index.values.astype(int)[-1])
             aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & (
                     two_last_years_db['period'] == 'Q')].index.values.astype(int)[-1])
-        elif av_periods['Q']==True and av_periods['6M']==True and two_last_years_crosstab.loc[last_year, 'Q'] == 2 and two_last_years_crosstab.loc[last_year, '6M'] == 1:
-            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == last_year) & (
-                    two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
-            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & (
-                    two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
-        elif av_periods['Q']==True and av_periods['6M']==True and two_last_years_crosstab.loc[last_year, 'Q'] == 1:
-            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == last_year) & (
-                    two_last_years_db['period'] == 'Q')].index.values.astype(int)[-1])
-            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & (
-                    two_last_years_db['period'] == 'Q')].index.values.astype(int)[-1])
-            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & (
-                    two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
-        elif av_periods['6M']==True and two_last_years_crosstab.loc[last_year, '6M'] == 1:
-            print(two_last_years_db['code'])
-            aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == last_year) & (
-                    two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
             aggr_periods.append(two_last_years_db[(two_last_years_db['year'] == (last_year - 1)) & (
                     two_last_years_db['period'] == '6M')].index.values.astype(int)[-1])
 
@@ -74,17 +73,16 @@ class DCF_calc:
         stock_data_dict = {}
 
         for column in last_year_result.index:
-            if re.search('num[1-9].??$', column) or re.search('price[1-9].??_day$', column):
+            if re.search('num[1-9].??$', column, re.IGNORECASE) or re.search('price[1-9].??_day$', column, re.IGNORECASE):
                 price_id = int(re.findall('[0-9]+', column)[0])
                 if price_id not in stock_data_dict:
                     stock_data_dict[price_id] = {'ev_price':0}
 
-                if re.search('num[1-9].??$', column) and 'num' not in stock_data_dict[price_id]:
+                if re.search('num[1-9].??$', column, re.IGNORECASE) and 'num' not in stock_data_dict[price_id]:
                     stock_data_dict[price_id]['num'] = last_year_result[column]
-                if re.search('price[1-9].??_day$', column) and 'price' not in stock_data_dict[price_id]:
+                if re.search('price[1-9].??_day$', column, re.IGNORECASE) and 'price' not in stock_data_dict[price_id]:
                     stock_data_dict[price_id]['cur_price'] = last_year_result[column]
 
-        #min_stock_id = min(stock_data_dict, key=stock_data_dict.get)
         min_price_id = min(stock_data_dict.keys())
         for price_id in stock_data_dict.keys():
             stock_data_dict[price_id]['stock_ratio'] = stock_data_dict[price_id]['cur_price']/stock_data_dict[min_price_id]['cur_price']
@@ -92,7 +90,7 @@ class DCF_calc:
         return stock_data_dict
 
 
-    def __init__(self, csv_file, betta, rf, rm, country_risk, invst_hrznt):
+    def __init__(self, csv_file, betta, rf, rm, country_risk, invst_hrznt, type):
 
         self.betta = betta
         self.rf = rf
@@ -101,7 +99,7 @@ class DCF_calc:
         self.invst_hrznt = invst_hrznt
 
         asset_db = pd.read_csv(csv_file)
-        asset_db = asset_db[asset_db['type'] == 'МСФО']
+        asset_db = asset_db[asset_db['type'] == type]
         filt_asset_db = asset_db[asset_db['period']=='Y']
         
         last_year = asset_db['year'].max()
@@ -114,11 +112,14 @@ class DCF_calc:
         self.stock_data_dict = DCF_calc.calculate_stock_data(self.asset_db)
 
     def calculate_wacc(self, last_year_result):
-        # Calculate WACC
+
+        # Calculate capital weights
         we = last_year_result['equity'] / (last_year_result['equity'] + last_year_result['total_debt'])
         wd = last_year_result['total_debt'] / (last_year_result['equity'] + last_year_result['total_debt'])
         # print(f'we1: {we}\nwd1: {wd}\n')
 
+        #Calculate capital costs
+        #CAPM
         ke = self.rf + self.betta * (self.rm - self.rf) + self.country_risk
         if last_year_result['total_debt'] > 0:
             kd = last_year_result['interest_expense'] / last_year_result['total_debt'] * 100
@@ -126,7 +127,9 @@ class DCF_calc:
             kd = 0
         tax = (last_year_result['earnings_wo_tax'] - last_year_result['earnings']) / last_year_result['earnings_wo_tax']
 
+        #WACC
         wacc = (ke * we * (1 - tax) + kd * wd) / 100
+
         return wacc
 
     @staticmethod
@@ -162,8 +165,9 @@ class DCF_calc:
         extrp_compnts = ['earnings', 'depr_depl_amort', 'capex', 'ebitda', 'nwc']
         extrp_coef = pd.Series(data=np.zeros(len(extrp_compnts)), index=extrp_compnts)
         for i in extrp_compnts:
-            for j in range(int(init_min_max_year[0]) + 1, int(init_min_max_year[1]) + 1):
-                extrp_coef[i] += (fcf_df.loc[i, str(j)] - fcf_df.loc[i, str(j - 1)]) / fcf_df.loc[i, str(j - 1)]
+            for j in range(int(init_min_max_year[0]) + 1, int(init_min_max_year[1])+1):
+                if fcf_df.loc[i, str(j - 1)] != 0:
+                    extrp_coef[i] += (fcf_df.loc[i, str(j)] - fcf_df.loc[i, str(j - 1)]) / fcf_df.loc[i, str(j - 1)]
             extrp_coef[i] = extrp_coef[i] / (int(init_min_max_year[1]) - int(init_min_max_year[0]))
 
         #FCF extrapolation
@@ -180,8 +184,8 @@ class DCF_calc:
                                                              fcf_df.loc['capex',ext_period[0]:ext_period[1]] - fcf_df.loc['delta_nwc',ext_period[0]:ext_period[1]]
 
         npv = npf.npv(wacc, fcf_df.loc['fcf', ext_period[0]:ext_period[1]].values)
-        ev_ebitda = ev / fcf_df.loc['ebitda', init_min_max_year[1]]
-        tv = ev_ebitda * fcf_df.loc['ebitda', ext_period[1]] / (1 + wacc) ** invst_hrznt
+        ev_ebitda_multi = ev / fcf_df.loc['ebitda', init_min_max_year[1]]
+        tv = ev_ebitda_multi * fcf_df.loc['ebitda', ext_period[1]] / (1 + wacc) ** invst_hrznt
         ev_dcf = npv + tv
 
         return ev_dcf
@@ -196,14 +200,19 @@ class DCF_calc:
 
        #Calculate evaluation price
         self.ev = last_year_result['capital'] + last_year_result['total_debt'] - last_year_result['cash_and_equiv']
+        negative_ev = 0
+        if self.ev < 0:
+            self.ev += last_year_result['cash_and_equiv']
+            negative_ev = 1
 
        # Calculate WACC
         self.wacc = self.calculate_wacc(last_year_result)
 
         # Net present DCF evaluation price
         self.dcf_ev = DCF_calc.calculate_ev_dcf(self.asset_db, self.ev, self.wacc, self.invst_hrznt)
-        self.dcf_cap =  self.dcf_ev  - last_year_result['total_debt'] + last_year_result['cash_and_equiv']
-
+        self.dcf_cap =  self.dcf_ev - last_year_result['total_debt'] + last_year_result['cash_and_equiv']
+        if negative_ev:
+            self.dcf_cap -= last_year_result['cash_and_equiv']
         result_stock_data = dict()
 
         #print('Num  Current price   Evaluated price Margin,%')
@@ -216,7 +225,10 @@ class DCF_calc:
             cur_stock_dict = {}
             cur_stock_dict['cur_price'] = self.stock_data_dict[price_id]['cur_price']
             cur_stock_dict['ev_price'] = self.stock_data_dict[price_id]['stock_ratio']*base_stock_price
-            cur_stock_dict['margin'] = (cur_stock_dict['ev_price'] - cur_stock_dict['cur_price'])/cur_stock_dict['cur_price']*100
+            if cur_stock_dict['cur_price'] > 0:
+                cur_stock_dict['margin'] = (cur_stock_dict['ev_price'] - cur_stock_dict['cur_price'])/cur_stock_dict['cur_price']*100
+            else:
+                cur_stock_dict['margin'] = 0
             result_stock_data[price_id] = cur_stock_dict
 
         self.result_stock_data = result_stock_data
