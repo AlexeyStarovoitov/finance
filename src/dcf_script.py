@@ -137,7 +137,7 @@ class DCF_calc:
         # FCF database creation
         fcf_indexes = ['earnings', 'depr_depl_amort', 'capex', 'ebitda', 'nwc', 'delta_nwc', 'fcf']
         fcf_columns = list(asset_db['year'].apply(str).values)
-        for year in range(int(asset_db['year'].max()) + 1, int(asset_db['year'].max()) + int(invst_hrznt) + 1):
+        for year in range(int(asset_db['year'].max()) + 1, int(invst_hrznt) + 1):
             fcf_columns.append(str(year))
         fcf_df = pd.DataFrame(data=np.zeros((len(fcf_indexes), len(fcf_columns))), index=fcf_indexes,
                               columns=fcf_columns)
@@ -171,7 +171,7 @@ class DCF_calc:
             extrp_coef[i] = extrp_coef[i] / (int(init_min_max_year[1]) - int(init_min_max_year[0]))
 
         #FCF extrapolation
-        ext_period = [str(int(init_min_max_year[1]) + 1), str(int(init_min_max_year[1]) + int(invst_hrznt))]
+        ext_period = [str(int(init_min_max_year[1]) + 1), str(int(invst_hrznt))]
         for i in fcf_indexes:
             if i in extrp_compnts:
                 for j in range(int(ext_period[0]), int(ext_period[1]) + 1):
@@ -185,7 +185,8 @@ class DCF_calc:
 
         npv = npf.npv(wacc, fcf_df.loc['fcf', ext_period[0]:ext_period[1]].values)
         ev_ebitda_multi = ev / fcf_df.loc['ebitda', init_min_max_year[1]]
-        tv = ev_ebitda_multi * fcf_df.loc['ebitda', ext_period[1]] / (1 + wacc) ** invst_hrznt
+        delta_invest_horizont = int(invst_hrznt) - int(init_min_max_year[1])
+        tv = ev_ebitda_multi * fcf_df.loc['ebitda', ext_period[1]] / (1 + wacc) ** delta_invest_horizont
         ev_dcf = npv + tv
 
         return ev_dcf
@@ -210,7 +211,7 @@ class DCF_calc:
 
         # Net present DCF evaluation price
         self.dcf_ev = DCF_calc.calculate_ev_dcf(self.asset_db, self.ev, self.wacc, self.invst_hrznt)
-        self.dcf_cap =  self.dcf_ev - last_year_result['total_debt'] + last_year_result['cash_and_equiv']
+        self.dcf_cap = self.dcf_ev - last_year_result['total_debt'] + last_year_result['cash_and_equiv']
         if negative_ev:
             self.dcf_cap -= last_year_result['cash_and_equiv']
         result_stock_data = dict()
